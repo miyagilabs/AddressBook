@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "com.deitel.addressbook"
-        minSdkVersion 8
+        minSdkVersion 21
         targetSdkVersion 8
     }
 
@@ -14,6 +14,12 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+    }
+
+    dependencies {
+        compile (project(':voicer')) {
+            transitive = false
         }
     }
 }
