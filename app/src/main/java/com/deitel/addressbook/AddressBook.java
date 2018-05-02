@@ -17,7 +17,15 @@ import android.widget.CursorAdapter;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
 
-public class AddressBook extends ListActivity {
+import com.miyagilabs.voicer.InitListener;
+import com.miyagilabs.voicer.Voicer;
+import com.miyagilabs.voicer.VoicerFactory;
+import com.miyagilabs.voicer.annotation.Voice;
+import com.miyagilabs.voicer.tts.SpeakerException;
+import com.miyagilabs.voicer.tts.VirtualAssistant;
+import com.miyagilabs.voicer.widget.Toaster;
+
+public class AddressBook extends ListActivity implements InitListener {
     public static final String ROW_ID = "row_id"; // Intent extra key
     // event listener that responds to the user touching a contact's name
     // in the ListView
@@ -36,6 +44,7 @@ public class AddressBook extends ListActivity {
     }; // end viewContactListener
     private ListView contactListView; // the ListActivity's ListView
     private CursorAdapter contactAdapter; // adapter for ListView
+    private Voicer mVoicer;
 
     // called when the activity is first created
     @Override
@@ -54,6 +63,7 @@ public class AddressBook extends ListActivity {
 
     @Override
     protected void onResume() {
+        VoicerFactory.fakeVoicer(this, this);
         super.onResume(); // call super's onResume method
 
         // create new GetContactsTask and execute it
@@ -62,6 +72,7 @@ public class AddressBook extends ListActivity {
 
     @Override
     protected void onStop() {
+        mVoicer.shutdown();
         Cursor cursor = contactAdapter.getCursor(); // get current Cursor
 
         if (cursor != null) {
@@ -84,12 +95,34 @@ public class AddressBook extends ListActivity {
     // handle choice from options menu
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        addContact();
+        return super.onOptionsItemSelected(item); // call super's method
+    } // end method onOptionsItemSelected
+
+    @Voice(commands = "add contact")
+    private void addContact() {
         // create a new Intent to launch the AddEditContact Activity
         Intent addNewContact =
                 new Intent(AddressBook.this, AddEditContact.class);
         startActivity(addNewContact); // start the AddEditContact Activity
-        return super.onOptionsItemSelected(item); // call super's method
-    } // end method onOptionsItemSelected
+    }
+
+    @Override
+    public void onInit(Voicer voicer, int status) {
+        mVoicer = voicer;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mVoicer.addVoicerListener(new Toaster(AddressBook.this));
+            }
+        });
+        try {
+            mVoicer.addVoicerListener(new VirtualAssistant(this));
+        } catch (SpeakerException | InterruptedException e) {
+            e.printStackTrace();
+        }
+        mVoicer.register(this);
+    }
 
     // performs database query outside GUI thread
     private class GetContactsTask extends AsyncTask<Object, Object, Cursor> {
