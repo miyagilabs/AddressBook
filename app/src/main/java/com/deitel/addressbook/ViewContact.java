@@ -34,7 +34,6 @@ public class ViewContact extends Activity implements InitListener {
     // called when the activity is first created
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        VoicerFactory.fakeVoicer(this, this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.view_contact);
 
@@ -53,6 +52,7 @@ public class ViewContact extends Activity implements InitListener {
     // called when the activity is first created
     @Override
     protected void onResume() {
+        VoicerFactory.fakeVoicer(this, this);
         super.onResume();
 
         // create new LoadContactTask and execute it
@@ -60,9 +60,9 @@ public class ViewContact extends Activity implements InitListener {
     } // end method onResume
 
     @Override
-    protected void onDestroy() {
+    protected void onPause() {
         mVoicer.shutdown();
-        super.onDestroy();
+        super.onPause();
     }
 
     // create the Activity's menu from a menu resource XML file
@@ -80,18 +80,7 @@ public class ViewContact extends Activity implements InitListener {
         switch (item.getItemId()) // switch based on selected MenuItem's ID
         {
             case R.id.editItem:
-                // create an Intent to launch the AddEditContact Activity
-                Intent addEditContact =
-                        new Intent(this, AddEditContact.class);
-
-                // pass the selected contact's data as extras with the Intent
-                addEditContact.putExtra(AddressBook.ROW_ID, rowID);
-                addEditContact.putExtra("name", nameTextView.getText());
-                addEditContact.putExtra("phone", phoneTextView.getText());
-                addEditContact.putExtra("email", emailTextView.getText());
-                addEditContact.putExtra("street", streetTextView.getText());
-                addEditContact.putExtra("city", cityTextView.getText());
-                startActivity(addEditContact); // start the Activity
+                editContact();
                 return true;
             case R.id.deleteItem:
                 deleteContact(); // delete the displayed contact
@@ -100,6 +89,22 @@ public class ViewContact extends Activity implements InitListener {
                 return super.onOptionsItemSelected(item);
         } // end switch
     } // end method onOptionsItemSelected
+
+    @Voice(commands = "edit contact")
+    private void editContact() {
+        // create an Intent to launch the AddEditContact Activity
+        Intent addEditContact =
+                new Intent(this, AddEditContact.class);
+
+        // pass the selected contact's data as extras with the Intent
+        addEditContact.putExtra(AddressBook.ROW_ID, rowID);
+        addEditContact.putExtra("name", nameTextView.getText());
+        addEditContact.putExtra("phone", phoneTextView.getText());
+        addEditContact.putExtra("email", emailTextView.getText());
+        addEditContact.putExtra("street", streetTextView.getText());
+        addEditContact.putExtra("city", cityTextView.getText());
+        startActivity(addEditContact); // start the Activity
+    }
 
     // delete a contact
     @Voice(commands = "delete")
