@@ -153,12 +153,7 @@ public class ViewContact extends Activity implements InitListener {
     @Override
     public void onInit(Voicer voicer, int status) {
         mVoicer = voicer;
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mVoicer.addVoicerListener(new Toaster(ViewContact.this));
-            }
-        });
+        mVoicer.addVoicerListener(new Toaster(this));
         try {
             mVoicer.addVoicerListener(new VirtualAssistant(this));
         } catch (SpeakerException | InterruptedException e) {
