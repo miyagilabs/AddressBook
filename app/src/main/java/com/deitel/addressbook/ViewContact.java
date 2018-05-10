@@ -14,18 +14,26 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.TextView;
 
-public class ViewContact extends Activity {
+import com.miyagilabs.voicer.InitListener;
+import com.miyagilabs.voicer.Voicer;
+import com.miyagilabs.voicer.VoicerFactory;
+import com.miyagilabs.voicer.annotation.Voice;
+import com.miyagilabs.voicer.tts.SpeakerException;
+import com.miyagilabs.voicer.tts.VirtualAssistant;
+import com.miyagilabs.voicer.widget.Toaster;
+
+public class ViewContact extends Activity implements InitListener {
     private long rowID; // selected contact's name
     private TextView nameTextView; // displays contact's name
     private TextView phoneTextView; // displays contact's phone
     private TextView emailTextView; // displays contact's email
     private TextView streetTextView; // displays contact's street
     private TextView cityTextView; // displays contact's city/state/zip
+    private Voicer mVoicer;
 
     // called when the activity is first created
     @Override
     public void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.view_contact);
 
@@ -44,11 +52,18 @@ public class ViewContact extends Activity {
     // called when the activity is first created
     @Override
     protected void onResume() {
+        VoicerFactory.fakeVoicer(this, this);
         super.onResume();
 
         // create new LoadContactTask and execute it
         new LoadContactTask().execute(rowID);
     } // end method onResume
+
+    @Override
+    protected void onPause() {
+        mVoicer.shutdown();
+        super.onPause();
+    }
 
     // create the Activity's menu from a menu resource XML file
     @Override
@@ -65,18 +80,7 @@ public class ViewContact extends Activity {
         switch (item.getItemId()) // switch based on selected MenuItem's ID
         {
             case R.id.editItem:
-                // create an Intent to launch the AddEditContact Activity
-                Intent addEditContact =
-                        new Intent(this, AddEditContact.class);
-
-                // pass the selected contact's data as extras with the Intent
-                addEditContact.putExtra(AddressBook.ROW_ID, rowID);
-                addEditContact.putExtra("name", nameTextView.getText());
-                addEditContact.putExtra("phone", phoneTextView.getText());
-                addEditContact.putExtra("email", emailTextView.getText());
-                addEditContact.putExtra("street", streetTextView.getText());
-                addEditContact.putExtra("city", cityTextView.getText());
-                startActivity(addEditContact); // start the Activity
+                editContact();
                 return true;
             case R.id.deleteItem:
                 deleteContact(); // delete the displayed contact
@@ -86,7 +90,24 @@ public class ViewContact extends Activity {
         } // end switch
     } // end method onOptionsItemSelected
 
+    @Voice(commands = "edit contact")
+    private void editContact() {
+        // create an Intent to launch the AddEditContact Activity
+        Intent addEditContact =
+                new Intent(this, AddEditContact.class);
+
+        // pass the selected contact's data as extras with the Intent
+        addEditContact.putExtra(AddressBook.ROW_ID, rowID);
+        addEditContact.putExtra("name", nameTextView.getText());
+        addEditContact.putExtra("phone", phoneTextView.getText());
+        addEditContact.putExtra("email", emailTextView.getText());
+        addEditContact.putExtra("street", streetTextView.getText());
+        addEditContact.putExtra("city", cityTextView.getText());
+        startActivity(addEditContact); // start the Activity
+    }
+
     // delete a contact
+    @Voice(commands = "delete")
     private void deleteContact() {
         // create a new AlertDialog Builder
         AlertDialog.Builder builder =
@@ -128,6 +149,18 @@ public class ViewContact extends Activity {
         builder.setNegativeButton(R.string.button_cancel, null);
         builder.show(); // display the Dialog
     } // end method deleteContact
+
+    @Override
+    public void onInit(Voicer voicer, int status) {
+        mVoicer = voicer;
+        mVoicer.addVoicerListener(new Toaster(this));
+        try {
+            mVoicer.addVoicerListener(new VirtualAssistant(this));
+        } catch (SpeakerException | InterruptedException e) {
+            e.printStackTrace();
+        }
+        mVoicer.register(this);
+    }
 
     // performs database query outside GUI thread
     private class LoadContactTask extends AsyncTask<Long, Object, Cursor> {

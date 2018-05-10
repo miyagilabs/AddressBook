@@ -12,7 +12,15 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.EditText;
 
-public class AddEditContact extends Activity {
+import com.miyagilabs.voicer.InitListener;
+import com.miyagilabs.voicer.Voicer;
+import com.miyagilabs.voicer.VoicerFactory;
+import com.miyagilabs.voicer.annotation.Voice;
+import com.miyagilabs.voicer.tts.SpeakerException;
+import com.miyagilabs.voicer.tts.VirtualAssistant;
+import com.miyagilabs.voicer.widget.Toaster;
+
+public class AddEditContact extends Activity implements InitListener {
     private long rowID; // id of contact being edited, if any
 
     // EditTexts for contact information
@@ -25,6 +33,11 @@ public class AddEditContact extends Activity {
     OnClickListener saveContactButtonClicked = new OnClickListener() {
         @Override
         public void onClick(View v) {
+            save();
+        } // end method onClick
+
+        @Voice(commands = "save")
+        private void save() {
             if (nameEditText.getText().length() != 0) {
                 AsyncTask<Object, Object, Object> saveContactTask =
                         new AsyncTask<Object, Object, Object>() {
@@ -54,8 +67,9 @@ public class AddEditContact extends Activity {
                 builder.setPositiveButton(R.string.errorButton, null);
                 builder.show(); // display the Dialog
             } // end else
-        } // end method onClick
+        }
     }; // end OnClickListener saveContactButtonClicked
+    private Voicer mVoicer;
 
     // called when the Activity is first started
     @Override
@@ -87,6 +101,18 @@ public class AddEditContact extends Activity {
         saveContactButton.setOnClickListener(saveContactButtonClicked);
     } // end method onCreate
 
+    @Override
+    protected void onResume() {
+        VoicerFactory.fakeVoicer(this, this);
+        super.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        mVoicer.shutdown();
+        super.onPause();
+    }
+
     // saves contact information to the database
     private void saveContact() {
         // get DatabaseConnector to interact with the SQLite database
@@ -110,6 +136,23 @@ public class AddEditContact extends Activity {
                     cityEditText.getText().toString());
         } // end else
     } // end class saveContact
+
+    @Override
+    public void onInit(Voicer voicer, int status) {
+        mVoicer = voicer;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mVoicer.addVoicerListener(new Toaster(AddEditContact.this));
+            }
+        });
+        try {
+            mVoicer.addVoicerListener(new VirtualAssistant(this));
+        } catch (SpeakerException | InterruptedException e) {
+            e.printStackTrace();
+        }
+        mVoicer.register(saveContactButtonClicked);
+    }
 } // end class AddEditContact
 
 
